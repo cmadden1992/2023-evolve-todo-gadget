@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<!-- This title is not used. -->
+		<title>To Do List</title>
+
+		<!-- Use Bootstrap to achieve basic styling -->
+		<link rel="stylesheet" href="../lib/bootstrap-5.2.3.min.css">
+
+		<!-- Additional styling for this gadget -->
+		<style type="text/css">
+			body {
+				overflow-y: hidden;
+			}
+			#main {
+				height: 100%;
+				width: 100%;
+				position: absolute;
+			}
+			.header {
+				width: 100%;
+				padding: 0px 5px;
+				margin-top: 2%;
+				position: sticky;
+				top: 0;
+			}
+			#todo-input {
+				overflow-y: auto;
+				resize: none;
+				border: 1px solid #BBBBBB;
+				border-right: none;
+			}
+			#add-todo {}
+			#list-container {
+				width: 100%;
+				height: 79%;
+				padding: 5px 0px 5px 5px;
+			}
+			#todo-list {
+				margin: 0px;
+				padding: 0px;
+				height: 100%;
+				overflow-y: auto;
+			}
+			.list-item {
+				width: 100%;
+				position: relative;
+			}
+			.todo {
+				width: 75%;
+				word-break: break-word;
+				display: block;
+			}
+			.content-edit {
+				display: inline-block;
+				overflow-y: auto;
+				resize: none;
+				border: 1px solid #BBBBBB;
+				border-radius: 3px;
+			}
+			.list-item .edit:not(.checked):not(.editing){
+				display: block;
+			}
+			.act-btn {
+				display: none;
+				position: absolute;
+				z-index: 10;
+				right: 5px;
+				top: 0px;
+				height: 22px;
+				width: 50px;
+				font-size: 12px;
+				padding: 0px;
+			}
+			.delete {}
+			.delete.checked {
+				display: block;
+			}
+			.save {
+				width: 19%;
+				left: 80%;
+			}
+			.save.editing {
+				display: block;
+			}
+			input[type="checkbox"]:checked + label {
+				text-decoration: line-through;
+				color: #767676;
+			}
+		</style>
+
+		<!-- jQuery is REQUIRED for gadgetlib.js to work. -->
+		<script type="text/javascript" src="../lib/jquery-3.6.3.min.js"></script>
+
+		<!-- gadgetlib.js is a library that exposes a global "gadget" object and avails a number of basic methods. It provides an easy solution to interacted with Omni CMS APIs. -->
+		<script type="text/javascript" src="../lib/gadgetlib.js"></script>
+	</head>
+	<body>
+		<div id="main">
+			<div class="header mb-2">
+				<div class="input-group input-group-sm">
+					<textarea type="text" id="todo-input" name="task-input" placeholder="Add a To Do..." maxlength="100"
+						class="form-control"></textarea>
+					<button id="add-todo" class="btn btn-success">+ Add</button>
+				</div>
+			</div>
+			<div id="list-container">
+				<ul id="todo-list" class="mb-3"></ul>
+			</div>
+		</div>
+
+		<!-- This div is needed if you will be editing your gadget's source code in Omni CMS's source code editor. It prevents Omni CMS from adding a DirectEdit link in the gadget. -->
+		<div style="display:none;">
+			<!-- ouc:ob --><!-- /ouc:ob -->
+		</div>
+
+		<!-- Define the gadget's functionality with JavaScript in this script tag at the bottom of the document body. -->
+		<script type="text/javascript">
+			// When using the Metadata API, we specify a unique identifier for our Metadata content. Think of the mime_type as the database name.
+			const mime_type = 'cms-gadget-metadata-todo/json';
+
+			class TodoList {
+				constructor () {
+					this.allTodos = [];
+					this.todos = [];
+					this.el = document.getElementById('todo-list');
+					this.inputEl = document.getElementById('todo-input');
+					this.todoAdd = document.getElementById('add-todo');
+				}
+				getEl () {
+					return this.el;
+				}
+				// '+ Add' button click event listener
+				addToDoHandler () {
+					this.todoAdd.addEventListener('click', (evt) => {
+						const text = this.inputEl.value;
+						if (text) { this.create(text); }
+					});
+				}
+				// do the fetch for todos
+				async fetch () {
+
+				}
+				// renders todo list
+				render () {
+					this.el.innerHTML = '';
+				}
+				// calls Metadata 'create' method, handles completion
+				async create (content) {
+
+				}
+				// utility method to return todo from todos array based on passed ID
+				getTodoFromList (id) {
+					return this.allTodos.filter((todo) => todo.id === Number(id))[0];
+				}
+			};
+			// class to handle each todo item
+			class TodoItem {
+				// construct the 
+				constructor(props, parentView) {
+					this.rawData = props.data.rawData || false;
+					this.listItemClass = 'list-item';
+					this.editTextAreaClass = 'content-edit';
+					this.language = {
+						Delete: 'Delete',
+						Edit: 'Edit',
+						Save: 'Save'
+					};
+					this.id = props.id;
+					this.complete = props.data.complete || false;
+					this.isChecked = `${this.complete ? 'checked' : ''}`;
+					this.content = props.data.content;
+					this.insertType = props.insertType || 'beforeend';
+					this.parentView = parentView;
+				}
+				// attach events to the dom
+				addEvents() {
+					this.checkboxEvent();
+					this.deleteEvent();
+					this.editEvent();
+					this.saveEvent();
+				}
+				template() {
+					return `<li class="${this.listItemClass}" data-id="${this.id}">
+								<div class="form-check todo">
+									<input class="form-check-input" type="checkbox" ${this.isChecked}>
+									<label><span class="content-area"></span></label>
+								</div>
+								<button class="btn btn-danger act-btn delete ${this.isChecked}" data-action="delete-todo">${this.language.Delete}</button>
+								<button class="btn btn-primary act-btn edit ${this.isChecked}" data-action="edit-todo">${this.language.Edit}</button>
+								<button class="btn btn-primary act-btn save ${this.isChecked}" data-action="save-todo">${this.language.Save}</button>
+							</li>`;
+				}
+				initialContentLoad() {
+					this.setContent();
+					this.setElement();
+				}
+				render() {
+					this.parentView.getEl().insertAdjacentHTML(this.insertType, this.template());
+					this.setElement();
+					this.setVisual();
+					this.addEvents();
+				}
+				findElement(selector) {
+					return this.el.querySelector(selector);
+				}
+				setContent() {
+					this.findElement('.content-area').textContent = this.content;
+				}
+				setElement() {
+					this.el = this.parentView.getEl().querySelector(`[data-id="${this.id}"]`);
+				}
+				async updateTodo() {
+
+				}
+				checkboxEvent() {
+
+				}
+				async removeTodo() {
+
+				}
+				deleteEvent() {
+
+				}
+				setEditingClasses() {
+
+				}
+				removeInput() {
+
+				}
+				editEvent() {
+
+				}
+				saveEvent() {
+
+				}
+			};
+
+			// start the application
+			document.addEventListener('DOMContentLoaded', async () => {
+				// Makes sure the global "gadget" object is instantiated with your access token for you to start making API calls
+				await gadget.ready();
+				const TodoObject = new TodoList();
+				// call for the todo
+				await TodoObject.fetch();
+				// render the todos
+				await TodoObject.render();
+				// add event listener for adding todos
+				TodoObject.addToDoHandler();
+			});
+		</script>
+		<!-- ouc:editor wysiwyg="no" --><!-- /ouc:editor -->
+	</body>
+</html>
